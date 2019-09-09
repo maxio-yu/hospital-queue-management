@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>My first Vue app</title>
+  <script src="./js/vue.js"></script>
+  <script src="./js/axios.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <ul>
+      </li>
+      <li v-if="patientList.length > 0">就诊中： {{patientList[0].name}} {{patientList[0].clinic_num}} </li>
+      <li v-for="(patient,i) in patientList" v-if="!(i==0)">
+        候诊{{i}}： {{patient.name}} {{patient.clinic_num}}
+      </li>
+    </ul>
+  </div>
+
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        patientList: [],
+      },
+      mounted: function () {
+        setInterval(this.getPatients, 500)
+        setInterval(this.getCallList, 500)
+      },
+      methods: {
+        getPatients: function () {
+          _self = this
+          axios.get('/patient_list').then(function (response) {
+            _self.patientList = response.data
+          })
+        },
+        getCallList: function () {
+          _self = this
+          axios.get('/call_list').then(function (response) {
+            let patients = response.data
+            for (let i in patients) {
+              let patient = patients[i]
+              console.log(patient)
+              let voiceTxt = "请" + patient.name + "到" + patient.clinic_num + "就诊"
+              console.log(voiceTxt)
+              let utterThis = new window.SpeechSynthesisUtterance(voiceTxt);
+              window.speechSynthesis.speak(utterThis);
+            }
+          })
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>
