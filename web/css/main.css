@@ -1,0 +1,36 @@
+.el-carousel__item {
+  background-color: black;
+}
+
+.el-alert {
+  padding: 3vh;
+}
+
+.el-alert__title {
+  font-size: 3vh;
+}
+
+.el-alert .el-alert__description {
+  font-size: 5vh;
+}
+
+.el-divider--horizontal {
+  margin: 0;
+}
+
+.call-list {
+  background-color: #FEF0F0;
+  color: #F56C6C;
+  display: table-cell;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 10vh;
+}
+
+.no-padding {
+  padding: 0
+}
+
+.no-margin {
+  margin: 0
+}

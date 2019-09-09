@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,7 +13,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+//TODO: 只允许一个客户端进行连接
 func main() {
+	os.MkdirAll("./database", os.ModeDir|os.ModePerm)
 	r := gin.Default()
 	backend := NewMaster()
 
@@ -19,7 +23,7 @@ func main() {
 	r.StaticFile("/controller", "./web/controller/index.html")
 	r.Static("/js", "./web/js")
 	r.Static("/css", "./web/css")
-	r.Static("/img", "./web/img")
+	r.Static("/ads/img", "./web/ads/img")
 
 	r.GET("/patient_list", backend.GetPatientList)
 	r.POST("/patient_list", backend.PostPatientList)
@@ -29,6 +33,8 @@ func main() {
 	r.PUT("/patient_list/:id/actions/call", backend.CallPatient)
 
 	r.GET("/call_list", backend.GetCallList)
+
+	r.GET("/ads_img", backend.GetAdvertisementsImages)
 	r.Run()
 }
 
@@ -39,6 +45,7 @@ type Backend interface {
 	DeletePatient(c *gin.Context)
 	CallPatient(c *gin.Context)
 	GetCallList(c *gin.Context)
+	GetAdvertisementsImages(c *gin.Context)
 }
 
 type Master struct {
@@ -159,6 +166,20 @@ func (m *Master) GetCallList(c *gin.Context) {
 	callList := m.callList
 	m.callList = []WaitingPatient{}
 	c.JSON(200, callList)
+}
+
+func (m *Master) GetAdvertisementsImages(c *gin.Context) {
+	files, err := filepath.Glob("web/ads/img/*")
+	if err != nil {
+		c.JSON(200, "")
+		return
+	}
+	res := []string{}
+	for _, file := range files {
+		fileName := strings.TrimLeft(file, "web/")
+		res = append(res, fileName)
+	}
+	c.JSON(200, res)
 }
 
 type WaitingPatient struct {

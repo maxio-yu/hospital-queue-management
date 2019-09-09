@@ -9,16 +9,16 @@
 
 <body>
     <div id="app">
-        <ol>
-            <li v-for="patient in patientList">
-                {{patient.name}} {{patient.clinic_num}}
-            </li>
-        </ol>
         <input v-model="newPaitent.name" placeholder="name">
         <input v-model="newPaitent.uid" placeholder="uid">
         <input v-model="newPaitent.clinicNum" placeholder="clinic_num">
         <button v-on:click="addPatient">增加</button>
         <button v-on:click="callPatient">下一个</button>
+        <ol>
+            <li v-for="patient in patientList">
+                {{patient.name}} {{patient.clinic_num}}
+            </li>
+        </ol>
     </div>
 
     <script>

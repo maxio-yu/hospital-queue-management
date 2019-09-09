@@ -5,17 +5,53 @@
   <title>My first Vue app</title>
   <script src="./js/vue.js"></script>
   <script src="./js/axios.min.js"></script>
+  <script src="./js/element-ui/lib/index.js"></script>
+  <link rel="stylesheet" href="./css/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="./css/main.css">
 </head>
 
-<body>
+<body class="no-padding no-margin">
   <div id="app">
-    <ul>
-      </li>
-      <li v-if="patientList.length > 0">就诊中： {{patientList[0].name}} {{patientList[0].clinic_num}} </li>
-      <li v-for="(patient,i) in patientList" v-if="!(i==0)">
-        候诊{{i}}： {{patient.name}} {{patient.clinic_num}}
-      </li>
-    </ul>
+    <el-container class="no-padding no-margin">
+      <el-aside class="no-padding no-margin" :style="{width:'30vw', height:'100vh'}">
+        <div>
+          <div class="name-list">
+            <el-alert title="就诊中" type="success" show-icon :closable="false">
+              <template v-if="patientList.length > 0">{{patientList[0].name}} {{patientList[0].clinic_num}}</template>
+              <template v-else>无人就诊</template>
+            </el-alert>
+            <el-divider></el-divider>
+            <template v-for="(patient,i) in patientList" v-if="!i==0">
+              <el-alert title="候诊中" type="info" show-icon :closable="false">
+                {{i}}: {{patient.name}} {{patient.clinic_num}}
+              </el-alert>
+              <el-divider></el-divider>
+            </template>
+          </div>
+        </div>
+      </el-aside>
+      <el-container class="no-padding no-margin">
+        <el-main class="no-padding no-margin">
+          <div>
+            <el-carousel :style="{height: '75vh'}">
+              <el-carousel-item v-for="item in adv_imgs" :key="item" :style="{height: '75vh'}">
+                <div :style="{width: '75vw', height: '75vh'}">
+                  <img :src="item" :style="{width: '100%', height: '100%',objectFit: 'contain'}" />
+                </div>
+              </el-carousel-item>
+            </el-carousel>
+          </div>
+        </el-main>
+        <el-footer :style="{height:'25vh'}" class="no-padding no-margin">
+          <div class="call-list" :style="{width:'70vw', height:'25vh'}">
+            <template v-if="patientList.length > 0">
+              请{{patientList[0].name}}到{{patientList[0].clinic_num}}就诊
+            </template>
+            <template v-else>祝您身体健康</template>
+          </div>
+        </el-footer>
+      </el-container>
+    </el-container>
   </div>
 
   <script>
@@ -23,21 +59,24 @@
       el: '#app',
       data: {
         patientList: [],
+        adv_imgs: [],
       },
-      mounted: function () {
+      mounted: function() {
+        this.getAdvImgs()
         setInterval(this.getPatients, 500)
         setInterval(this.getCallList, 500)
+        setInterval(this.getAdvImgs, 60000)
       },
       methods: {
-        getPatients: function () {
+        getPatients: function() {
           _self = this
-          axios.get('/patient_list').then(function (response) {
+          axios.get('/patient_list').then(function(response) {
             _self.patientList = response.data
           })
         },
-        getCallList: function () {
+        getCallList: function() {
           _self = this
-          axios.get('/call_list').then(function (response) {
+          axios.get('/call_list').then(function(response) {
             let patients = response.data
             for (let i in patients) {
               let patient = patients[i]
@@ -45,10 +84,25 @@
               let voiceTxt = "请" + patient.name + "到" + patient.clinic_num + "就诊"
               console.log(voiceTxt)
               let utterThis = new window.SpeechSynthesisUtterance(voiceTxt);
+              _self.$notify({
+                title: '注意',
+                message: voiceTxt,
+                type: "warning",
+                showClose: false
+              });
+              //TODO 取消叫号，当有下一个请求进入时
+              window.speechSynthesis.speak(utterThis);
+              window.speechSynthesis.speak(utterThis);
               window.speechSynthesis.speak(utterThis);
             }
           })
-        }
+        },
+        getAdvImgs: function() {
+          _self = this
+          axios.get('/ads_img').then(function(response) {
+            _self.adv_imgs = response.data
+          })
+        },
       }
     })
   </script>
