@@ -32,7 +32,7 @@ func main() {
 	r.DELETE("/patient_list/:id", backend.DeletePatient)
 	r.PUT("/patient_list/:id/actions/call", backend.CallPatient)
 
-	r.GET("/call_list", backend.GetCallList)
+	r.GET("/call_patient", backend.GetCallPatient)
 
 	r.GET("/ads_img", backend.GetAdvertisementsImages)
 	r.Run()
@@ -50,14 +50,14 @@ type Backend interface {
 	DeletePatientList(c *gin.Context)
 	DeletePatient(c *gin.Context)
 	CallPatient(c *gin.Context)
-	GetCallList(c *gin.Context)
+	GetCallPatient(c *gin.Context)
 	GetAdvertisementsImages(c *gin.Context)
 }
 
 type Master struct {
-	mutex    sync.Mutex
-	db       *xorm.Engine
-	callList []WaitingPatient
+	mutex       sync.Mutex
+	db          *xorm.Engine
+	callPatient *WaitingPatient
 }
 
 func NewMaster() Backend {
@@ -151,7 +151,7 @@ func (m *Master) CallPatient(c *gin.Context) {
 		c.JSON(200, "")
 		return
 	}
-	m.callList = append(m.callList, patient)
+	m.callPatient = &patient
 	c.JSON(200, "")
 }
 
@@ -166,12 +166,12 @@ func (m *Master) DeletePatient(c *gin.Context) {
 	c.JSON(200, n)
 }
 
-func (m *Master) GetCallList(c *gin.Context) {
+func (m *Master) GetCallPatient(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	callList := m.callList
-	m.callList = []WaitingPatient{}
-	c.JSON(200, callList)
+	callPatient := m.callPatient
+	m.callPatient = nil
+	c.JSON(200, callPatient)
 }
 
 func (m *Master) GetAdvertisementsImages(c *gin.Context) {

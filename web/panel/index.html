@@ -64,7 +64,7 @@
       mounted: function() {
         this.getAdvImgs()
         setInterval(this.getPatients, 500)
-        setInterval(this.getCallList, 500)
+        setInterval(this.getCallPatient, 500)
         setInterval(this.getAdvImgs, 60000)
       },
       methods: {
@@ -74,28 +74,29 @@
             _self.patientList = response.data
           })
         },
-        getCallList: function() {
+        getCallPatient: function() {
           _self = this
-          axios.get('/call_list').then(function(response) {
-            let patients = response.data
-            for (let i in patients) {
-              let patient = patients[i]
-              console.log(patient)
-              let voiceTxt = "请" + patient.name + "到" + patient.clinic_num + "就诊"
-              console.log(voiceTxt)
-              let voice = new window.SpeechSynthesisUtterance(voiceTxt);
-              voice.lang = "zh-CN";
-              _self.$notify({
-                title: '注意',
-                message: voiceTxt,
-                type: "warning",
-                showClose: false
-              });
-              //TODO 取消叫号，当有下一个请求进入时
-              window.speechSynthesis.speak(voice);
-              window.speechSynthesis.speak(voice);
-              window.speechSynthesis.speak(voice);
+          axios.get('/call_patient').then(function(response) {
+            let patient = response.data
+            if (patient == null) {
+              console.log("no calling")
+              return
             }
+            //如果有新的叫号请求，取消未完成的叫号
+            window.speechSynthesis.cancel();
+            let voiceTxt = "请" + patient.name + "到" + patient.clinic_num + "就诊"
+            console.log(voiceTxt)
+            let voice = new window.SpeechSynthesisUtterance(voiceTxt);
+            voice.lang = "zh-CN";
+            _self.$notify({
+              title: '注意',
+              message: voiceTxt,
+              type: "warning",
+              showClose: false
+            });
+            window.speechSynthesis.speak(voice);
+            window.speechSynthesis.speak(voice);
+            window.speechSynthesis.speak(voice);
           })
         },
         getAdvImgs: function() {
