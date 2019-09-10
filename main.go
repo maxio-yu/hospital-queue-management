@@ -38,6 +38,12 @@ func main() {
 	r.Run()
 }
 
+/*
+func onlyOneClient(c *gin.Context) {
+	clientAddr := c.Request.RemoteAddr
+}
+*/
+
 type Backend interface {
 	GetPatientList(c *gin.Context)
 	PostPatientList(c *gin.Context)

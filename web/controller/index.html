@@ -2,97 +2,98 @@
 <html>
 
 <head>
-    <title>My first Vue app</title>
-    <script src="./js/vue.js"></script>
-    <script src="./js/axios.min.js"></script>
+  <title>My first Vue app</title>
+  <script src="./js/vue.js"></script>
+  <script src="./js/axios.min.js"></script>
 </head>
 
 <body>
-    <div id="app">
-        <input v-model="newPaitent.name" placeholder="name">
-        <input v-model="newPaitent.uid" placeholder="uid">
-        <input v-model="newPaitent.clinicNum" placeholder="clinic_num">
-        <button v-on:click="addPatient">增加</button>
-        <button v-on:click="callPatient">下一个</button>
-        <ol>
-            <li v-for="patient in patientList">
-                {{patient.name}} {{patient.clinic_num}}
-            </li>
-        </ol>
-    </div>
+  <div id="app">
+    <input v-model="newPaitent.name" placeholder="name">
+    <input v-model="newPaitent.uid" placeholder="uid">
+    <input v-model="newPaitent.clinicNum" placeholder="clinic_num">
+    <button v-on:click="addPatient">增加</button>
+    <button v-on:click="nextPatient">下一个</button>
+    <ol>
+      <li v-for="(patient,i) in patientList">
+        {{patient.name}} {{patient.clinic_num}}
+        <button v-if="i==0" @click="callPatient([patient.id])">呼叫</button>
+      </li>
+    </ol>
+  </div>
 
-    <script>
-        var app = new Vue({
-            el: '#app',
-            data: {
-                patientList: [],
-                newPaitent: {
-                    name: "",
-                    uid: "",
-                    clinic_num: "",
-                },
-            },
-            created: function () {
-                this.getPatients()
-            },
-            methods: {
-                getPatients: function () {
-                    _self = this
-                    axios.get('/patient_list').then(function (response) {
-                        _self.patientList = response.data
-                    })
-                },
-                addPatient: function () {
-                    if (this.newPaitent.name == "") {
-                        alert("no name")
-                        return
-                    }
-                    if (this.newPaitent.clinicNum == "") {
-                        alert("no clinic num")
-                        return
-                    }
-                    _self = this
-                    axios.post('/patient_list', {
-                        name: this.newPaitent.name,
-                        uid: this.newPaitent.uid,
-                        clinic_num: this.newPaitent.clinicNum,
-                    }).then(function (response) {
-                        console.log(response.data)
-                        _self.getPatients()
-                    })
-                },
-                callPatient: function () {
-                    let patientNum = this.patientList.length
-                    if (patientNum < 1) {
-                        alert("没有病人")
-                        return
-                    }
-                    doneUid = this.patientList[0].id
-                    if (typeof (doneUid) == "undefined" || doneUid == "") {
-                        console.log("no id")
-                        return
-                    }
-                    _self = this
-                    axios.delete('/patient_list/' + doneUid).then(function (response) {
-                        console.log(response.data)
-                        if (patientNum > 1) {
-                            uid = _self.patientList[1].id
-                            if (typeof (uid) == "undefined" || uid == "") {
-                                console.log("no id")
-                                return
-                            }
-                            axios.put('/patient_list/' + uid + '/actions/call').then(function (response) {
-                                console.log(response.data)
-                                _self.getPatients()
-                            })
-                        } else {
-                            _self.getPatients()
-                        }
-                    })
-                }
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        patientList: [],
+        newPaitent: {
+          name: "",
+          uid: "",
+          clinic_num: "",
+        },
+      },
+      created: function() {
+        this.getPatients()
+      },
+      methods: {
+        getPatients: function() {
+          _self = this
+          axios.get('/patient_list').then(function(response) {
+            _self.patientList = response.data
+          })
+        },
+        addPatient: function() {
+          if (this.newPaitent.name == "") {
+            alert("no name")
+            return
+          }
+          if (this.newPaitent.clinicNum == "") {
+            alert("no clinic num")
+            return
+          }
+          _self = this
+          axios.post('/patient_list', {
+            name: this.newPaitent.name,
+            uid: this.newPaitent.uid,
+            clinic_num: this.newPaitent.clinicNum,
+          }).then(function(response) {
+            console.log(response.data)
+            _self.getPatients()
+          })
+        },
+        nextPatient: function() {
+          let patientNum = this.patientList.length
+          if (patientNum < 1) {
+            alert("没有病人")
+            return
+          }
+          preUid = this.patientList[0].id
+          if (typeof(preUid) == "undefined" || preUid == "") {
+            console.log("no id")
+            return
+          }
+          _self = this
+          axios.delete('/patient_list/' + preUid).then(function(response) {
+            console.log(response.data)
+            if (patientNum > 1) {
+              _self.callPatient(_self.patientList[1].id)
             }
-        })
-    </script>
+            _self.getPatients()
+          })
+        },
+        callPatient: function(uid) {
+          if (typeof(uid) == "undefined" || uid == "") {
+            console.log("no id")
+            return
+          }
+          axios.put('/patient_list/' + uid + '/actions/call').then(function(response) {
+            console.log(response.data)
+          })
+        }
+      }
+    })
+  </script>
 </body>
 
 </html>

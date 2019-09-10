@@ -83,7 +83,8 @@
               console.log(patient)
               let voiceTxt = "请" + patient.name + "到" + patient.clinic_num + "就诊"
               console.log(voiceTxt)
-              let utterThis = new window.SpeechSynthesisUtterance(voiceTxt);
+              let voice = new window.SpeechSynthesisUtterance(voiceTxt);
+              voice.lang = "zh-CN";
               _self.$notify({
                 title: '注意',
                 message: voiceTxt,
@@ -91,9 +92,9 @@
                 showClose: false
               });
               //TODO 取消叫号，当有下一个请求进入时
-              window.speechSynthesis.speak(utterThis);
-              window.speechSynthesis.speak(utterThis);
-              window.speechSynthesis.speak(utterThis);
+              window.speechSynthesis.speak(voice);
+              window.speechSynthesis.speak(voice);
+              window.speechSynthesis.speak(voice);
             }
           })
         },
