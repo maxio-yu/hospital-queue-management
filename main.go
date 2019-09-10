@@ -103,11 +103,11 @@ func (m *Master) PostPatientList(c *gin.Context) {
 		fmt.Println("errr binding: ", err)
 	}
 	fmt.Println("get new patient:", newPatient)
-	n, err := m.db.Insert(newPatient)
+	_, err = m.db.Insert(newPatient)
 	if err != nil {
 		fmt.Println("insert err: ", err)
 	}
-	c.JSON(200, n)
+	c.JSON(200, newPatient)
 }
 
 func (m *Master) DeletePatientList(c *gin.Context) {

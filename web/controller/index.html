@@ -9,15 +9,17 @@
 
 <body>
   <div id="app">
-    <input v-model="newPaitent.name" placeholder="name">
-    <input v-model="newPaitent.uid" placeholder="uid">
-    <input v-model="newPaitent.clinicNum" placeholder="clinic_num">
-    <button v-on:click="addPatient">增加</button>
-    <button v-on:click="nextPatient">下一个</button>
+    <input v-model="newPaitent.name" placeholder="姓名" size=50><br />
+    <input v-model="newPaitent.uid" placeholder="身份证号码" size=50><br />
+    <input v-model="newPaitent.clinicNum" placeholder="诊室名称" size=50><br />
+    <button @click="addPatient">增加</button>
+    <br />
+    <hr />
+    <button @click="nextPatient">下一位</button>
     <ol>
       <li v-for="(patient,i) in patientList">
         {{patient.name}} {{patient.clinic_num}}
-        <button v-if="i==0" @click="callPatient([patient.id])">呼叫</button>
+        <button v-if="i==0" @click="callPatient([patient.id])">再次呼叫</button>
       </li>
     </ol>
   </div>
@@ -45,11 +47,11 @@
         },
         addPatient: function() {
           if (this.newPaitent.name == "") {
-            alert("no name")
+            alert("请输入姓名")
             return
           }
           if (this.newPaitent.clinicNum == "") {
-            alert("no clinic num")
+            alert("请输入诊室名")
             return
           }
           _self = this
@@ -58,7 +60,10 @@
             uid: this.newPaitent.uid,
             clinic_num: this.newPaitent.clinicNum,
           }).then(function(response) {
-            console.log(response.data)
+            let patient = response.data
+            if (_self.patientList.length == 0) {
+              _self.callPatient(patient.id)
+            }
             _self.getPatients()
           })
         },
@@ -68,28 +73,25 @@
             alert("没有病人")
             return
           }
-          preUid = this.patientList[0].id
-          if (typeof(preUid) == "undefined" || preUid == "") {
+          preId = this.patientList[0].id
+          if (typeof(preId) == "undefined" || preId == "") {
             console.log("no id")
             return
           }
           _self = this
-          axios.delete('/patient_list/' + preUid).then(function(response) {
-            console.log(response.data)
+          axios.delete('/patient_list/' + preId).then(function(response) {
             if (patientNum > 1) {
               _self.callPatient(_self.patientList[1].id)
             }
             _self.getPatients()
           })
         },
-        callPatient: function(uid) {
-          if (typeof(uid) == "undefined" || uid == "") {
+        callPatient: function(id) {
+          if (typeof(id) == "undefined" || id == "") {
             console.log("no id")
             return
           }
-          axios.put('/patient_list/' + uid + '/actions/call').then(function(response) {
-            console.log(response.data)
-          })
+          axios.put('/patient_list/' + id + '/actions/call').then(function(response) {})
         }
       }
     })
