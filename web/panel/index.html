@@ -16,13 +16,13 @@
       <el-aside class="no-padding no-margin" :style="{width:'30vw', height:'100vh'}">
         <div>
           <div class="name-list">
-            <el-alert title="就诊中" type="success" show-icon :closable="false">
+            <el-alert title="治疗中" type="success" show-icon :closable="false">
               <template v-if="patientList.length > 0">{{patientList[0].name}} {{patientList[0].clinic_num}}</template>
-              <template v-else>无人就诊</template>
+              <template v-else>无人治疗</template>
             </el-alert>
             <el-divider></el-divider>
             <template v-for="(patient,i) in patientList" v-if="!i==0">
-              <el-alert title="候诊中" type="info" show-icon :closable="false">
+              <el-alert title="等待中" type="info" show-icon :closable="false">
                 {{i}}: {{patient.name}} {{patient.clinic_num}}
               </el-alert>
               <el-divider></el-divider>
@@ -33,7 +33,7 @@
       <el-container class="no-padding no-margin">
         <el-main class="no-padding no-margin">
           <div>
-            <el-carousel indicator-position="none" interval="6000" :style="{height: '75vh'}">
+            <el-carousel indicator-position="none" :interval="pic_interval" :style="{height: '75vh'}">
               <el-carousel-item v-for="item in adv_imgs" :key="item" :style="{height: '75vh'}">
                 <div :style="{width: '75vw', height: '75vh'}">
                   <img :src="item" :style="{width: '100%', height: '100%',objectFit: 'contain'}" alt="祝您身体健康" />
@@ -60,12 +60,14 @@
       data: {
         patientList: [],
         adv_imgs: [],
+        pic_interval: 3,
       },
       mounted: function() {
         this.getAdvImgs()
         setInterval(this.getPatients, 500)
         setInterval(this.getCallPatient, 500)
         setInterval(this.getAdvImgs, 60000)
+        setInterval(this.getPicInterval, 10000)
       },
       methods: {
         getPatients: function() {
@@ -105,6 +107,12 @@
             _self.adv_imgs = response.data
           })
         },
+        getPicInterval: function() {
+          _self = this
+          axios.get('/pic_interval').then(function(response) {
+            _self.pic_interval= response.data
+          })
+        }
       }
     })
   </script>

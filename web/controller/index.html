@@ -10,8 +10,8 @@
 <body>
   <div id="app">
     <input v-model="newPaitent.name" placeholder="姓名" size=50><br />
-    <input v-model="newPaitent.uid" placeholder="身份证号码" size=50><br />
     <input v-model="newPaitent.clinicNum" placeholder="诊室名称" size=50><br />
+    <input v-model="newPaitent.uid" placeholder="身份证号码" size=50><br />
     <button @click="addPatient">增加</button>
     <br />
     <hr />
@@ -20,6 +20,9 @@
       <li v-for="(patient,i) in patientList">
         {{patient.name}} {{patient.clinic_num}}
         <button v-if="i==0" @click="callPatient([patient.id])">再次呼叫</button>
+        <button v-if="i!=0" @click="callPatient([patient.id])">删除</button>
+        <button v-if="i!=0" @click="moveUpPatient([patient.id])">⬆️</button>
+        <button v-if="i!=(patientList.length-1)" @click="moveDownPatient([patient.id])">⬇️</button>
       </li>
     </ol>
   </div>
@@ -92,7 +95,27 @@
             return
           }
           axios.put('/patient_list/' + id + '/actions/call').then(function(response) {})
-        }
+        },
+        moveUpPatient: function(id) {
+          if (typeof(id) == "undefined" || id == "") {
+            console.log("no id")
+            return
+          }
+          _self = this
+          axios.put('/patient_list/' + id + '/actions/move_up').then(function(response) {
+            _self.getPatients()
+          })
+        },
+        moveDownPatient: function(id) {
+          if (typeof(id) == "undefined" || id == "") {
+            console.log("no id")
+            return
+          }
+          _self = this
+          axios.put('/patient_list/' + id + '/actions/move_down').then(function(response) {
+            _self.getPatients()
+          })
+        },
       }
     })
   </script>

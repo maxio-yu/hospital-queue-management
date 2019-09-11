@@ -31,10 +31,14 @@ func main() {
 
 	r.DELETE("/patient_list/:id", backend.DeletePatient)
 	r.PUT("/patient_list/:id/actions/call", backend.CallPatient)
+	r.PUT("/patient_list/:id/actions/move_up", backend.MoveUpPatient)
+	r.PUT("/patient_list/:id/actions/move_down", backend.MoveDownPatient)
 
 	r.GET("/call_patient", backend.GetCallPatient)
 
 	r.GET("/ads_img", backend.GetAdvertisementsImages)
+	r.GET("/ads_img/interval", backend.GetPicInterval)
+	r.PUT("/ads_img/interval", backend.SetPicInterval)
 	r.Run()
 }
 
@@ -49,15 +53,22 @@ type Backend interface {
 	PostPatientList(c *gin.Context)
 	DeletePatientList(c *gin.Context)
 	DeletePatient(c *gin.Context)
+	MoveUpPatient(c *gin.Context)
+	MoveDownPatient(c *gin.Context)
 	CallPatient(c *gin.Context)
 	GetCallPatient(c *gin.Context)
+
 	GetAdvertisementsImages(c *gin.Context)
+
+	SetPicInterval(c *gin.Context)
+	GetPicInterval(c *gin.Context)
 }
 
 type Master struct {
 	mutex       sync.Mutex
 	db          *xorm.Engine
 	callPatient *WaitingPatient
+	picInterval int
 }
 
 func NewMaster() Backend {
@@ -67,8 +78,6 @@ func NewMaster() Backend {
 		fmt.Println("errrorororo: ", err)
 		os.Exit(1)
 	}
-	m.db = db
-
 	exist, err := db.IsTableExist(WaitingPatient{})
 	if err != nil {
 		fmt.Println("Errrrrr check tabel: ", err)
@@ -80,6 +89,8 @@ func NewMaster() Backend {
 			fmt.Println("Errrrrr create tabel: ", err)
 		}
 	}
+	m.db = db
+	m.picInterval = 3
 	return m
 }
 
@@ -166,6 +177,128 @@ func (m *Master) DeletePatient(c *gin.Context) {
 	c.JSON(200, n)
 }
 
+func (m *Master) MoveUpPatient(c *gin.Context) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	id := c.Param("id")
+	patient := WaitingPatient{}
+	has, err := m.db.ID(id).Get(&patient)
+	if err != nil {
+		fmt.Println("no this patient: ", err)
+		c.JSON(200, "")
+		return
+	}
+	if !has {
+		fmt.Println("no this patient")
+		c.JSON(200, "")
+		return
+	}
+	prePatient := WaitingPatient{}
+	has, err = m.db.Where("id < ?", id).Desc("id").Limit(1, 0).Get(&prePatient)
+	if err != nil {
+		fmt.Println("get pre patient err: ", err)
+		c.JSON(200, "")
+		return
+	}
+	if !has {
+		fmt.Println("no pre patient")
+		c.JSON(200, "")
+		return
+	}
+	fmt.Println("pre patient", prePatient.Name)
+	session := m.db.NewSession()
+	defer session.Close()
+	err = session.Begin()
+	if err != nil {
+		fmt.Println("move up failed")
+		c.JSON(200, "")
+		return
+	}
+	_, err = session.ID(prePatient.Id).Update(&patient)
+	if err != nil {
+		session.Rollback()
+		fmt.Println("move up failed")
+		c.JSON(200, "")
+		return
+	}
+	_, err = session.ID(patient.Id).Update(&prePatient)
+	if err != nil {
+		session.Rollback()
+		fmt.Println("move up failed")
+		c.JSON(200, "")
+		return
+	}
+	err = session.Commit()
+	if err != nil {
+		fmt.Println("move down failed")
+		c.JSON(200, "")
+		return
+	}
+	c.JSON(200, "")
+}
+
+func (m *Master) MoveDownPatient(c *gin.Context) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	id := c.Param("id")
+	patient := WaitingPatient{}
+	has, err := m.db.ID(id).Get(&patient)
+	if err != nil {
+		fmt.Println("no this patient: ", err)
+		c.JSON(200, "")
+		return
+	}
+	if !has {
+		fmt.Println("no this patient")
+		c.JSON(200, "")
+		return
+	}
+	nextPatient := WaitingPatient{}
+	has, err = m.db.Where("id > ?", id).Asc("id").Limit(1, 0).Get(&nextPatient)
+	if err != nil {
+		fmt.Println("get next patient err: ", err)
+		c.JSON(200, "")
+		return
+	}
+	if !has {
+		fmt.Println("no next patient")
+		c.JSON(200, "")
+		return
+	}
+	fmt.Println("next patient", nextPatient.Name)
+	session := m.db.NewSession()
+	defer session.Close()
+	err = session.Begin()
+	if err != nil {
+		fmt.Println("move down failed")
+		c.JSON(200, "")
+		return
+	}
+	n, err := session.ID(nextPatient.Id).Update(&patient)
+	if err != nil {
+		session.Rollback()
+		fmt.Println("move down failed")
+		c.JSON(200, "")
+		return
+	}
+	fmt.Println("update ", n)
+
+	_, err = session.ID(patient.Id).Update(&nextPatient)
+	if err != nil {
+		session.Rollback()
+		fmt.Println("move down failed")
+		c.JSON(200, "")
+		return
+	}
+	err = session.Commit()
+	if err != nil {
+		fmt.Println("move down failed")
+		c.JSON(200, "")
+		return
+	}
+	c.JSON(200, "")
+}
+
 func (m *Master) GetCallPatient(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -186,6 +319,13 @@ func (m *Master) GetAdvertisementsImages(c *gin.Context) {
 		res = append(res, fileName)
 	}
 	c.JSON(200, res)
+}
+
+func (m *Master) GetPicInterval(c *gin.Context) {
+	c.JSON(200, m.picInterval)
+}
+
+func (m *Master) SetPicInterval(c *gin.Context) {
 }
 
 type WaitingPatient struct {
