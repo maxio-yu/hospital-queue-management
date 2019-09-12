@@ -90,7 +90,7 @@ func NewMaster() Backend {
 		}
 	}
 	m.db = db
-	m.picInterval = 3
+	m.picInterval = 10
 	return m
 }
 
@@ -325,7 +325,19 @@ func (m *Master) GetPicInterval(c *gin.Context) {
 	c.JSON(200, m.picInterval)
 }
 
+type PicInterval struct {
+	Interval int `json:"interval"`
+}
+
 func (m *Master) SetPicInterval(c *gin.Context) {
+	picInterval := PicInterval{}
+	if c.ShouldBindJSON(&picInterval) != nil {
+		c.JSON(400, "")
+		return
+	}
+	fmt.Println("set pic interval to: ", picInterval.Interval)
+	m.picInterval = picInterval.Interval
+	c.JSON(200, picInterval.Interval)
 }
 
 type WaitingPatient struct {

@@ -9,6 +9,9 @@
 
 <body>
   <div id="app">
+    <input v-model="picInterval" placeholder="图片间隔" size=50> <button @click="setPicInterval()">设置</button>
+    <br />
+    <hr />
     <input v-model="newPaitent.name" placeholder="姓名" size=50><br />
     <input v-model="newPaitent.clinicNum" placeholder="诊室名称" size=50><br />
     <input v-model="newPaitent.uid" placeholder="身份证号码" size=50><br />
@@ -37,6 +40,7 @@
           uid: "",
           clinic_num: "",
         },
+        picInterval: 10,
       },
       created: function() {
         this.getPatients()
@@ -116,6 +120,15 @@
             _self.getPatients()
           })
         },
+        setPicInterval: function() {
+          axios.put('/ads_img/interval', {"interval": parseInt(this.picInterval)}).then(function(response) {
+            if (response.status == 200) {
+              alert("时间被设置为"+response.data+"s")
+            } else {
+              alert("设置失败")
+            }
+          })
+        }
       }
     })
   </script>
