@@ -18,6 +18,19 @@
   margin: 0;
 }
 
+.el-notification {
+  width: 60vw;
+}
+
+.el-notification__title {
+  font-size: 8vh;
+}
+
+.el-notification__content {
+  font-size: 6vh;
+  line-height: 7vh;
+}
+
 .call-list {
   background-color: #FEF0F0;
   color: #F56C6C;
