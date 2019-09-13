@@ -43,11 +43,8 @@
           </div>
         </el-main>
         <el-footer :style="{height:'25vh'}" class="no-padding no-margin">
-          <div class="call-list" :style="{width:'70vw', height:'25vh'}">
-            <template v-if="patientList.length > 0">
-              请{{patientList[0].name}}到{{patientList[0].clinic_num}}就诊
-            </template>
-            <template v-else>祝您身体健康</template>
+          <div class="notification" :style="{width:'70vw', height:'25vh'}">
+            <template>{{notification}}</template>
           </div>
         </el-footer>
       </el-container>
@@ -62,6 +59,7 @@
         adv_imgs: [],
         pic_interval: 10,
         show_carousel: true,
+        notification: "祝您身体健康!"
       },
       mounted: function() {
         this.getAdvImgs()
@@ -69,6 +67,7 @@
         setInterval(this.getCallPatient, 500)
         setInterval(this.getAdvImgs, 60000)
         setInterval(this.getPicInterval, 10000)
+        setInterval(this.getNotification, 10000)
       },
       methods: {
         getPatients: function() {
@@ -118,6 +117,12 @@
                 _self.show_carousel = true
               })
             }
+          })
+        },
+        getNotification: function() {
+          _self = this
+          axios.get('/notification').then(function(response) {
+              _self.notification = response.data
           })
         }
       }

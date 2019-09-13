@@ -10,7 +10,10 @@
 
 <body>
   <div id="app">
-    <input v-model="picInterval" placeholder="图片间隔" size=50> <button @click="setPicInterval()">设置</button>
+    <b>图片播放间隔：</b><input v-model="picInterval" placeholder="图片间隔" size=50> <button @click="setPicInterval()">设置</button>
+    <br />
+    <b>通知栏内容：</b><input v-model="notification" placeholder="通知栏内容" size=50> <button
+      @click="setNotification()">设置</button>
     <br />
     <hr />
     <input v-model="newPaitent.name" placeholder="姓名" size=50><br />
@@ -52,6 +55,7 @@
         },
         addingPatients: "",
         picInterval: 10,
+        notification: "祝您身体健康!"
       },
       created: function () {
         this.getPatients()
@@ -169,6 +173,13 @@
             if (response.status == 200) {
               alert("时间被设置为" + response.data + "s")
             } else {
+              alert("设置失败")
+            }
+          })
+        },
+        setNotification: function () {
+          axios.put('/notification', { "content": this.notification }).then(function (response) {
+            if (response.status != 200) {
               alert("设置失败")
             }
           })

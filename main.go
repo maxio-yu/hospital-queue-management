@@ -39,6 +39,9 @@ func main() {
 	r.GET("/ads_img", backend.GetAdvertisementsImages)
 	r.GET("/ads_img/interval", backend.GetPicInterval)
 	r.PUT("/ads_img/interval", backend.SetPicInterval)
+
+	r.GET("/notification", backend.GetNotification)
+	r.PUT("/notification", backend.SetNotification)
 	r.Run()
 }
 
@@ -62,13 +65,17 @@ type Backend interface {
 
 	SetPicInterval(c *gin.Context)
 	GetPicInterval(c *gin.Context)
+
+	GetNotification(c *gin.Context)
+	SetNotification(c *gin.Context)
 }
 
 type Master struct {
-	mutex       sync.Mutex
-	db          *xorm.Engine
-	callPatient *WaitingPatient
-	picInterval int
+	mutex        sync.Mutex
+	db           *xorm.Engine
+	callPatient  *WaitingPatient
+	picInterval  int
+	notification string
 }
 
 func NewMaster() Backend {
@@ -91,6 +98,7 @@ func NewMaster() Backend {
 	}
 	m.db = db
 	m.picInterval = 10
+	m.notification = "祝您身体健康!"
 	return m
 }
 
@@ -342,6 +350,25 @@ func (m *Master) SetPicInterval(c *gin.Context) {
 	fmt.Println("set pic interval to: ", picInterval.Interval)
 	m.picInterval = picInterval.Interval
 	c.JSON(200, picInterval.Interval)
+}
+
+type Notification struct {
+	Content string `json:"content"`
+}
+
+func (m *Master) SetNotification(c *gin.Context) {
+	noti := Notification{}
+	if c.ShouldBindJSON(&noti) != nil {
+		c.JSON(400, "")
+		return
+	}
+	fmt.Println("set notificaiton to : ", noti.Content)
+	m.notification = noti.Content
+	c.JSON(200, noti.Content)
+}
+
+func (m *Master) GetNotification(c *gin.Context) {
+	c.JSON(200, m.notification)
 }
 
 type WaitingPatient struct {
