@@ -10,14 +10,15 @@
 
 <body>
   <div id="app">
-    <b>图片播放间隔：</b><input v-model="picInterval" placeholder="图片间隔" size=50> <button @click="setPicInterval()">设置</button>
+    <b>图片播放间隔：</b><input v-model="picInterval" placeholder="图片间隔（单位秒，默认10s）" size=50> <button
+      @click="setPicInterval()">设置</button>
     <br />
-    <b>通知栏内容：</b><input v-model="notification" placeholder="通知栏内容" size=50> <button
+    <b>通知栏内容：</b><input v-model="notification" placeholder="通知栏内容（建议不超过50个字）" size=50> <button
       @click="setNotification()">设置</button>
     <br />
     <hr />
     <input v-model="newPaitent.name" placeholder="姓名" size=50><br />
-    <input v-model="newPaitent.clinicNum" placeholder="诊室名称" size=50><br />
+    <input v-model="newPaitent.clinic_num" placeholder="诊室名称" size=50><br />
     <input v-model="newPaitent.uid" placeholder="身份证号码" size=50><br />
     <button @click="addPatient">增加</button>
     <br />
@@ -54,8 +55,8 @@
           uid: "",
         },
         addingPatients: "",
-        picInterval: 10,
-        notification: "祝您身体健康!"
+        picInterval: "",
+        notification: ""
       },
       created: function () {
         this.getPatients()
@@ -104,7 +105,7 @@
             alert("请输入姓名")
             return
           }
-          if (this.newPaitent.clinicNum == "") {
+          if (this.newPaitent.clinic_num == "") {
             alert("请输入诊室名")
             return
           }
@@ -112,7 +113,7 @@
           axios.post('/patient_list', {
             name: this.newPaitent.name,
             uid: this.newPaitent.uid,
-            clinic_num: this.newPaitent.clinicNum,
+            clinic_num: this.newPaitent.clinic_num,
           }).then(function (response) {
             _self.getPatients()
           })
@@ -134,7 +135,7 @@
             _self.getPatients()
           })
         },
-        deletePatient: function(id) {
+        deletePatient: function (id) {
           _self = this
           axios.delete('/patient_list/' + id).then(function (response) {
             _self.getPatients()
