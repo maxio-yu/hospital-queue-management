@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -103,12 +104,12 @@ func NewMaster() Backend {
 }
 
 func (m *Master) GetPatientList(c *gin.Context) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	patients := []WaitingPatient{}
 	err := m.db.Asc("id").Find(&patients)
 	if err != nil {
 		fmt.Println("find patiends error: ", err)
+		c.JSON(400, "")
+		return
 	}
 	c.JSON(200, patients)
 }
@@ -116,24 +117,28 @@ func (m *Master) GetPatientList(c *gin.Context) {
 func (m *Master) PostPatientList(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	newPatient := &WaitingPatient{}
-	err := c.ShouldBind(newPatient)
+	newPatient := WaitingPatient{}
+	err := c.ShouldBind(&newPatient)
 	if err != nil {
 		fmt.Println("errr binding: ", err)
 		c.JSON(400, "")
 		return
 	}
-	fmt.Println("get new patient:", newPatient)
-	_, err = m.db.Insert(newPatient)
+	_, err = m.db.Insert(&newPatient)
 	if err != nil {
 		fmt.Println("insert err: ", err)
 		c.JSON(400, "")
 		return
 	}
+	if m.IsFirstPatient(newPatient.Id) {
+		m.callPatient = &newPatient
+	}
 	c.JSON(200, newPatient)
 }
 
 func (m *Master) DeletePatientList(c *gin.Context) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	_, err := m.db.Exec("delete from waiting_patient")
 	if err != nil {
 		fmt.Println("delete err: ", err)
@@ -144,24 +149,37 @@ func (m *Master) DeletePatientList(c *gin.Context) {
 func (m *Master) UpdatePatient(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	id := c.Param("id")
-	newPatient := &WaitingPatient{}
-	err := c.ShouldBind(newPatient)
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, "")
+		return
+	}
+	newPatient := WaitingPatient{}
+	err = c.ShouldBind(newPatient)
 	if err != nil {
 		fmt.Println("errr binding: ", err)
+		c.JSON(400, "")
+		return
 	}
 	fmt.Println("get new patient:", newPatient)
-	_, err = m.db.ID(id).Update(newPatient)
+	_, err = m.db.ID(id).Update(&newPatient)
 	if err != nil {
 		fmt.Println("delete err: ", err)
+		c.JSON(400, "")
+		return
+	}
+	if m.IsFirstPatient(id) {
+		m.callPatient = &newPatient
 	}
 	c.JSON(200, "")
 }
 
 func (m *Master) CallPatient(c *gin.Context) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, "")
+		return
+	}
 	patient := WaitingPatient{}
 	has, err := m.db.ID(id).Get(&patient)
 	if err != nil {
@@ -181,10 +199,21 @@ func (m *Master) CallPatient(c *gin.Context) {
 func (m *Master) DeletePatient(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, "")
+		return
+	}
+	isFirstPatient := m.IsFirstPatient(id)
 	n, err := m.db.ID(id).Delete(&WaitingPatient{})
 	if err != nil {
 		fmt.Println("delete err: ", err)
+	}
+	if isFirstPatient {
+		newFirst := m.GetFirstPatient()
+		if newFirst != nil {
+			m.callPatient = newFirst
+		}
 	}
 	c.JSON(200, n)
 }
@@ -192,24 +221,28 @@ func (m *Master) DeletePatient(c *gin.Context) {
 func (m *Master) MoveUpPatient(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, "")
+		return
+	}
 	patient := WaitingPatient{}
 	has, err := m.db.ID(id).Get(&patient)
 	if err != nil {
 		fmt.Println("no this patient: ", err)
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	if !has {
 		fmt.Println("no this patient")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	prePatient := WaitingPatient{}
 	has, err = m.db.Where("id < ?", id).Desc("id").Limit(1, 0).Get(&prePatient)
 	if err != nil {
 		fmt.Println("get pre patient err: ", err)
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	if !has {
@@ -217,34 +250,37 @@ func (m *Master) MoveUpPatient(c *gin.Context) {
 		c.JSON(200, "")
 		return
 	}
-	fmt.Println("pre patient", prePatient.Name)
 	session := m.db.NewSession()
 	defer session.Close()
 	err = session.Begin()
 	if err != nil {
 		fmt.Println("move up failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	_, err = session.ID(prePatient.Id).Update(&patient)
 	if err != nil {
 		session.Rollback()
 		fmt.Println("move up failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	_, err = session.ID(patient.Id).Update(&prePatient)
 	if err != nil {
 		session.Rollback()
 		fmt.Println("move up failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	err = session.Commit()
 	if err != nil {
 		fmt.Println("move down failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
+	}
+	if m.IsFirstPatient(prePatient.Id) {
+		// NOTE: id is incorrect, if need to use id, re-struct it
+		m.callPatient = &patient
 	}
 	c.JSON(200, "")
 }
@@ -252,29 +288,33 @@ func (m *Master) MoveUpPatient(c *gin.Context) {
 func (m *Master) MoveDownPatient(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	id := c.Param("id")
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, "")
+		return
+	}
 	patient := WaitingPatient{}
 	has, err := m.db.ID(id).Get(&patient)
 	if err != nil {
 		fmt.Println("no this patient: ", err)
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	if !has {
 		fmt.Println("no this patient")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	nextPatient := WaitingPatient{}
 	has, err = m.db.Where("id > ?", id).Asc("id").Limit(1, 0).Get(&nextPatient)
 	if err != nil {
 		fmt.Println("get next patient err: ", err)
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	if !has {
 		fmt.Println("no next patient")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	fmt.Println("next patient", nextPatient.Name)
@@ -283,14 +323,14 @@ func (m *Master) MoveDownPatient(c *gin.Context) {
 	err = session.Begin()
 	if err != nil {
 		fmt.Println("move down failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	n, err := session.ID(nextPatient.Id).Update(&patient)
 	if err != nil {
 		session.Rollback()
 		fmt.Println("move down failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	fmt.Println("update ", n)
@@ -299,21 +339,23 @@ func (m *Master) MoveDownPatient(c *gin.Context) {
 	if err != nil {
 		session.Rollback()
 		fmt.Println("move down failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
 	}
 	err = session.Commit()
 	if err != nil {
 		fmt.Println("move down failed")
-		c.JSON(200, "")
+		c.JSON(400, "")
 		return
+	}
+	if m.IsFirstPatient(patient.Id) {
+		// NOTE: id is incorrect, if need to use id, re-struct it
+		m.callPatient = &nextPatient
 	}
 	c.JSON(200, "")
 }
 
 func (m *Master) GetCallPatient(c *gin.Context) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	callPatient := m.callPatient
 	m.callPatient = nil
 	c.JSON(200, callPatient)
@@ -369,6 +411,33 @@ func (m *Master) SetNotification(c *gin.Context) {
 
 func (m *Master) GetNotification(c *gin.Context) {
 	c.JSON(200, m.notification)
+}
+
+func (m *Master) IsFirstPatient(id int64) bool {
+	prePatient := WaitingPatient{}
+	has, err := m.db.Where("id < ?", id).Desc("id").Limit(1, 0).Get(&prePatient)
+	if err != nil {
+		fmt.Println("get pre patient err: ", err)
+		return false
+	}
+	if has {
+		return false
+	}
+	return true
+}
+
+func (m *Master) GetFirstPatient() *WaitingPatient {
+	firstPatient := WaitingPatient{}
+	has, err := m.db.Asc("id").Limit(1, 0).Get(&firstPatient)
+	if err != nil {
+		fmt.Println("get first patient err: ", err)
+		return nil
+	}
+	if !has {
+		fmt.Println("no patient")
+		return nil
+	}
+	return &firstPatient
 }
 
 type WaitingPatient struct {
