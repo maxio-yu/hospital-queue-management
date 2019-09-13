@@ -117,23 +117,49 @@ func (m *Master) GetPatientList(c *gin.Context) {
 func (m *Master) PostPatientList(c *gin.Context) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	newPatient := WaitingPatient{}
-	err := c.ShouldBind(&newPatient)
+	newPatients := []WaitingPatient{}
+	err := c.ShouldBind(&newPatients)
 	if err != nil {
 		fmt.Println("errr binding: ", err)
 		c.JSON(400, "")
 		return
 	}
-	_, err = m.db.Insert(&newPatient)
+	if len(newPatients) == 0 {
+		fmt.Println("no one to submit")
+		c.JSON(200, "")
+		return
+	}
+	session := m.db.NewSession()
+	defer session.Close()
+	err = session.Begin()
 	if err != nil {
-		fmt.Println("insert err: ", err)
+		fmt.Println("add patients fail")
 		c.JSON(400, "")
 		return
 	}
-	if m.IsFirstPatient(newPatient.Id) {
-		m.callPatient = &newPatient
+	var firstAddPatient WaitingPatient
+	for i, newPatient := range newPatients {
+		_, err = session.Insert(&newPatient)
+		if err != nil {
+			session.Rollback()
+			fmt.Println("insert err: ", err)
+			c.JSON(400, "")
+			return
+		}
+		if i == 0 {
+			firstAddPatient = newPatient
+		}
 	}
-	c.JSON(200, newPatient)
+	err = session.Commit()
+	if err != nil {
+		fmt.Println("add patients fail")
+		c.JSON(400, "")
+		return
+	}
+	if m.IsFirstPatient(firstAddPatient.Id) {
+		m.callPatient = &firstAddPatient
+	}
+	c.JSON(200, "")
 }
 
 func (m *Master) DeletePatientList(c *gin.Context) {
@@ -155,7 +181,7 @@ func (m *Master) UpdatePatient(c *gin.Context) {
 		return
 	}
 	newPatient := WaitingPatient{}
-	err = c.ShouldBind(newPatient)
+	err = c.ShouldBind(&newPatient)
 	if err != nil {
 		fmt.Println("errr binding: ", err)
 		c.JSON(400, "")

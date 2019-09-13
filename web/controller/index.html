@@ -17,12 +17,13 @@
       @click="setNotification()">设置</button>
     <br />
     <hr />
-    <input v-model="newPaitent.name" placeholder="姓名" size=50><br />
-    <input v-model="newPaitent.clinic_num" placeholder="诊室名称" size=50><br />
-    <input v-model="newPaitent.uid" placeholder="身份证号码" size=50><br />
+    <input v-model="newPatient.name" placeholder="姓名" size=50><br />
+    <input v-model="newPatient.clinic_num" placeholder="诊室名称" size=50><br />
+    <input v-model="newPatient.uid" placeholder="身份证号码" size=50><br />
     <button @click="addPatient">增加</button>
     <br />
     <hr />
+    <button @click="deleteAllPatients">清空列表</button>
     <button @click="nextPatient">下一位</button>
     <div>
       <div class="oneline">
@@ -49,7 +50,7 @@
       el: '#app',
       data: {
         patientList: [],
-        newPaitent: {
+        newPatient: {
           name: "",
           clinic_num: "直线加速器室",
           uid: "",
@@ -70,7 +71,7 @@
         },
         addPatients: function () {
           let p = this.addingPatients.split("\n")
-          let failedList = ""
+          let newPatients = []
           for (i in p) {
             let line = p[i].trim()
             if (line == "") {
@@ -86,38 +87,38 @@
             if (uid == undefined) {
               uid = ""
             }
-            axios.post('/patient_list', {
+            newPatients.push({
               name: name,
               clinic_num: clinic,
               uid: uid,
-            }).then(function (response) {
-              if (response.status != 200) {
-                alert("添加" + name + "失败")
-              }
-              if (i == (p.length - 1)) {
-                _self.getPatients()
-              }
             })
           }
+          axios.post('/patient_list', newPatients).then(function (response) {
+            if (response.status != 200) {
+              alert("添加失败")
+            } else {
+              _self.getPatients()
+            }
+          })
         },
         addPatient: function () {
-          if (this.newPaitent.name == "") {
+          if (this.newPatient.name == "") {
             alert("请输入姓名")
             return
           }
-          if (this.newPaitent.clinic_num == "") {
+          if (this.newPatient.clinic_num == "") {
             alert("请输入诊室名")
             return
           }
           _self = this
-          axios.post('/patient_list', {
-            name: this.newPaitent.name,
-            uid: this.newPaitent.uid,
-            clinic_num: this.newPaitent.clinic_num,
-          }).then(function (response) {
+          axios.post('/patient_list', [{
+            name: this.newPatient.name,
+            uid: this.newPatient.uid,
+            clinic_num: this.newPatient.clinic_num,
+          }]).then(function (response) {
             _self.getPatients()
           })
-          this.newPaitent.name = ""
+          this.newPatient.name = ""
         },
         nextPatient: function () {
           let patientNum = this.patientList.length
@@ -138,6 +139,12 @@
         deletePatient: function (id) {
           _self = this
           axios.delete('/patient_list/' + id).then(function (response) {
+            _self.getPatients()
+          })
+        },
+        deleteAllPatients: function () {
+          _self = this
+          axios.delete('/patient_list').then(function (response) {
             _self.getPatients()
           })
         },
