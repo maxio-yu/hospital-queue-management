@@ -112,11 +112,15 @@ func (m *Master) PostPatientList(c *gin.Context) {
 	err := c.ShouldBind(newPatient)
 	if err != nil {
 		fmt.Println("errr binding: ", err)
+		c.JSON(400, "")
+		return
 	}
 	fmt.Println("get new patient:", newPatient)
 	_, err = m.db.Insert(newPatient)
 	if err != nil {
 		fmt.Println("insert err: ", err)
+		c.JSON(400, "")
+		return
 	}
 	c.JSON(200, newPatient)
 }

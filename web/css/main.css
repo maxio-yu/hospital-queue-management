@@ -47,3 +47,8 @@
 .no-margin {
   margin: 0
 }
+
+.oneline {
+  float: left;
+  width: 50%;
+}

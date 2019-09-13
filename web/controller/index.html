@@ -5,6 +5,7 @@
   <title>My first Vue app</title>
   <script src="./js/vue.js"></script>
   <script src="./js/axios.min.js"></script>
+  <link rel="stylesheet" href="./css/main.css">
 </head>
 
 <body>
@@ -19,15 +20,24 @@
     <br />
     <hr />
     <button @click="nextPatient">下一位</button>
-    <ol>
-      <li v-for="(patient,i) in patientList">
-        {{patient.name}} {{patient.clinic_num}}
-        <button v-if="i==0" @click="callPatient([patient.id])">再次呼叫</button>
-        <button v-if="i!=0" @click="callPatient([patient.id])">删除</button>
-        <button v-if="i!=0" @click="moveUpPatient([patient.id])">⬆️</button>
-        <button v-if="i!=(patientList.length-1)" @click="moveDownPatient([patient.id])">⬇️</button>
-      </li>
-    </ol>
+    <div>
+      <div class="oneline">
+        <ol>
+          <li v-for="(patient,i) in patientList">
+            {{patient.name}} {{patient.clinic_num}}
+            <button v-if="i==0" @click="callPatient([patient.id])">再次呼叫</button>
+            <button v-if="i!=0" @click="callPatient([patient.id])">删除</button>
+            <button v-if="i!=0" @click="moveUpPatient([patient.id])">⬆️</button>
+            <button v-if="i!=(patientList.length-1)" @click="moveDownPatient([patient.id])">⬇️</button>
+          </li>
+        </ol>
+      </div>
+      <div class="oneline">
+        <button @click="addPatients">批量添加</button>
+        <br />
+        <textarea cols=50 rows=100 v-model="addingPatients" placeholder="每行一个病人，格式（后两项可有可无，英文逗号）：姓名,诊室,身份证"></textarea>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -37,22 +47,55 @@
         patientList: [],
         newPaitent: {
           name: "",
+          clinic_num: "直线加速器室",
           uid: "",
-          clinic_num: "",
         },
+        addingPatients: "",
         picInterval: 10,
       },
-      created: function() {
+      created: function () {
         this.getPatients()
       },
       methods: {
-        getPatients: function() {
+        getPatients: function () {
           _self = this
-          axios.get('/patient_list').then(function(response) {
+          axios.get('/patient_list').then(function (response) {
             _self.patientList = response.data
           })
         },
-        addPatient: function() {
+        addPatients: function () {
+          let p = this.addingPatients.split("\n")
+          let failedList = ""
+          for (i in p) {
+            let line = p[i].trim()
+            if (line == "") {
+              continue
+            }
+            info = line.split(",", 3)
+            let name = info[0]
+            let clinic = info[1]
+            let uid = info[2]
+            if (clinic == undefined) {
+              clinic = "直线加速器室"
+            }
+            if (uid == undefined) {
+              uid = ""
+            }
+            axios.post('/patient_list', {
+              name: name,
+              clinic_num: clinic,
+              uid: uid,
+            }).then(function (response) {
+              if (response.status != 200) {
+                alert("添加" + name + "失败")
+              }
+              if (i == (p.length - 1)) {
+                _self.getPatients()
+              }
+            })
+          }
+        },
+        addPatient: function () {
           if (this.newPaitent.name == "") {
             alert("请输入姓名")
             return
@@ -66,64 +109,65 @@
             name: this.newPaitent.name,
             uid: this.newPaitent.uid,
             clinic_num: this.newPaitent.clinicNum,
-          }).then(function(response) {
+          }).then(function (response) {
             let patient = response.data
             if (_self.patientList.length == 0) {
               _self.callPatient(patient.id)
             }
             _self.getPatients()
           })
+          this.newPaitent.name = ""
         },
-        nextPatient: function() {
+        nextPatient: function () {
           let patientNum = this.patientList.length
           if (patientNum < 1) {
             alert("没有病人")
             return
           }
           preId = this.patientList[0].id
-          if (typeof(preId) == "undefined" || preId == "") {
+          if (typeof (preId) == "undefined" || preId == "") {
             console.log("no id")
             return
           }
           _self = this
-          axios.delete('/patient_list/' + preId).then(function(response) {
+          axios.delete('/patient_list/' + preId).then(function (response) {
             if (patientNum > 1) {
               _self.callPatient(_self.patientList[1].id)
             }
             _self.getPatients()
           })
         },
-        callPatient: function(id) {
-          if (typeof(id) == "undefined" || id == "") {
+        callPatient: function (id) {
+          if (typeof (id) == "undefined" || id == "") {
             console.log("no id")
             return
           }
-          axios.put('/patient_list/' + id + '/actions/call').then(function(response) {})
+          axios.put('/patient_list/' + id + '/actions/call').then(function (response) { })
         },
-        moveUpPatient: function(id) {
-          if (typeof(id) == "undefined" || id == "") {
-            console.log("no id")
-            return
-          }
-          _self = this
-          axios.put('/patient_list/' + id + '/actions/move_up').then(function(response) {
-            _self.getPatients()
-          })
-        },
-        moveDownPatient: function(id) {
-          if (typeof(id) == "undefined" || id == "") {
+        moveUpPatient: function (id) {
+          if (typeof (id) == "undefined" || id == "") {
             console.log("no id")
             return
           }
           _self = this
-          axios.put('/patient_list/' + id + '/actions/move_down').then(function(response) {
+          axios.put('/patient_list/' + id + '/actions/move_up').then(function (response) {
             _self.getPatients()
           })
         },
-        setPicInterval: function() {
-          axios.put('/ads_img/interval', {"interval": parseInt(this.picInterval)}).then(function(response) {
+        moveDownPatient: function (id) {
+          if (typeof (id) == "undefined" || id == "") {
+            console.log("no id")
+            return
+          }
+          _self = this
+          axios.put('/patient_list/' + id + '/actions/move_down').then(function (response) {
+            _self.getPatients()
+          })
+        },
+        setPicInterval: function () {
+          axios.put('/ads_img/interval', { "interval": parseInt(this.picInterval) }).then(function (response) {
             if (response.status == 200) {
-              alert("时间被设置为"+response.data+"s")
+              alert("时间被设置为" + response.data + "s")
             } else {
               alert("设置失败")
             }
